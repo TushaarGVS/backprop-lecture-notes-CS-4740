@@ -1,0 +1,154 @@
+\section{Functions with vector inputs}
+\label{sec:4}
+
+So far we've seen how to compute gradients for functions with scalar inputs. All the concepts discussed above can be extended to handle vector and matrix operations, specifically scalar-valued functions with vector inputs (e.g., $f(x, y) = y^Tx$, where $x,y \in \mathbb{R}^n$) and vector-valued functions with vector inputs (e.g., $f(W, x) = Wx$, where $W \in \mathbb{R}^{m \times n}, x \in \mathbb{R}^n$).
+
+\subsection{Scalar-valued functions}
+\label{sec:4.1}
+
+Single-valued functions with vectorized inputs is a natural extension of what we've already discussed in $\S$\ref{sec:3}. Consider the example of dot product
+$$
+f(x, y) =  y^T x,
+$$
+where $x, y \in \mathbb{R}^n$. Observe that the above $f(x, y)$ is equivalent to
+$$
+f(x_1, x_2, \dotsc, x_n, y_1,  y_2, \dotsc, y_n) = \sum_{j=1}^n x_j y_j,
+$$
+which is $f(x, y)$ but written as a function that takes in scalar inputs. Hence, using vector inputs for scalar-valued functions is a natural extension of scalar-valued functions in several variables. 
+
+\begin{figure}[!t]
+\centering
+\begin{tikzpicture}[align=center,node distance=1.5cm and 1.5cm]
+    \node[] (x) {$\begin{bmatrix}x_1 \\ \vdots \\ x_n\end{bmatrix} = x$};
+    \node[below=of x] (y) {$\begin{bmatrix}y_1 \\ \vdots \\ y_n\end{bmatrix} = y$};
+    \node[opnode,right=of x] (op1) {$\langle\cdot, \cdot\rangle$};
+    \node[right=of op1] (f) {$f(x, y) = \sum_j x_j y_j$};
+
+    \draw (x) edge[edge] (op1);
+    \draw (y) edge[edge] (op1);
+    \draw (op1) edge[edge] (f);
+    
+    \draw ([shift={(-0,-0.1)}]f.west) edge[gradedge] node[gradnode,xshift=0.5cm,yshift=-0.5cm] {\footnotesize $\partial f/\partial f = 1$} ([shift={(-0,-0.1)}]op1.east);
+    \draw ([shift={(-0,-0.1)}]op1.west) edge[gradedge] node[gradnode,xshift=-0.5cm,yshift=0.8cm] {\footnotesize $\nabla_x f = y$} ([shift={(-0,-0.1)}]x.east);
+    \draw ([shift={(-0.3,-0.1)}]op1.south) edge[gradedge] node[gradnode,xshift=0.5cm,yshift=-1cm] {\footnotesize $\nabla_y f = x$} ([shift={(-0.1,0.9)}]y.east);
+\end{tikzpicture}
+\caption{The computational graph of a dot product (indicated as $\langle \cdot, \cdot \rangle$) using vector inputs $x, y$ and a scalar output.}
+\label{fig:9}
+\end{figure}
+
+The computation graph for $f(x, y) = y^T x$ is shown in Figure~\ref{fig:9}. One thing to note is that we moved away from $\partial f / \partial x$ to $\nabla_x f$ to indicate that the gradient is now a vector of partial derivatives with 
+$$
+\nabla_x f[j] = \frac{\partial f}{\partial x_j} = \frac{\partial}{\partial x_j} x_1 y_1 + \cdots + x_j y_j + \cdots x_n y_n = y_j.
+$$
+Similarly, $\nabla_y f[j] = x_j$. Hence, $\nabla_x f = y$ and $\nabla_y f = x$---this confirms to our previous understanding that a multiply gate performs cross-amplification.
+
+As a thought exercise, how would you run backpropagation for $f(x) = \Vert x \Vert_2^2 = x^T x$ ($\Vert\cdot\Vert_2$ is the $2$-norm)? Can you relate this to branching discussed in $\S$\ref{sec:3.3}?
+
+\subsection{Vector-valued functions}
+\label{sec:4.2}
+
+Recall that the Jacobian matrix $\J_f \in \mathbb{R}^{m \times n}$ of a vector-valued function $f: \mathbb{R}^n \rightarrow \mathbb{R}^m$ is a generalization of the gradient of a scalar-valued function in several variables:
+$$
+\J_f = \begin{bmatrix}
+    \dfrac{\partial f}{\partial x_1} & 
+    \dfrac{\partial f}{\partial x_2} &
+    \cdots &
+    \dfrac{\partial f}{\partial x_n}
+\end{bmatrix} = 
+\renewcommand{\arraystretch}{2}
+\begin{bmatrix}
+    \dfrac{\partial f_1}{\partial x_1} & \dfrac{\partial f_1}{\partial x_2} & \cdots & \dfrac{\partial f_1}{\partial x_n} \\
+    \vdots & \vdots & \ddots & \vdots \\
+    \dfrac{\partial f_m}{\partial x_1} & \dfrac{\partial f_m}{\partial x_2} & \cdots & \dfrac{\partial f_m}{\partial x_n}
+\end{bmatrix}.
+\renewcommand{\arraystretch}{1.5}
+$$
+One thing to note is that for a single-valued function, the Jacobian is the transpose of the gradient, and consequentially, $\nabla_x f = \J_f^T \nabla_b f$ (commonly known as the \textit{vector-Jacobian product}) is the accumulated gradient at an intermediate $x$, with local Jacobian $\J_f$ and backwards-flowing gradient $\nabla_b f$.
+
+\begin{figure}[!t]
+\centering
+\begin{tikzpicture}[align=center,node distance=1.5cm and 1.5cm]
+    \node[] (x) {$\begin{bmatrix}x_1 \\ \vdots \\ x_n\end{bmatrix} = x$};
+    \node[below=of x,xshift=-1cm] (w) {$\begin{bmatrix}w_{11} & \cdots & w_{1n} \\ \vdots & \ddots & \vdots \\ w_{m1} & \cdots & w_{mn} \end{bmatrix} = W$};
+    \node[opnode,right=of x] (op1) {$@$};
+    \node[right=of op1] (f) {$f(W, x) = Wx$};
+
+    \draw (x) edge[edge] (op1);
+    \draw (y) edge[edge] (op1);
+    \draw (op1) edge[edge] (f);
+    
+    \draw ([shift={(-0,-0.1)}]f.west) edge[gradedge] node[gradnode,xshift=0.5cm,yshift=-0.5cm] {\footnotesize $\nabla f = e$} ([shift={(-0,-0.1)}]op1.east);
+    \draw ([shift={(-0,-0.1)}]op1.west) edge[gradedge] node[gradnode,xshift=-0.5cm,yshift=0.8cm] {\footnotesize $\nabla_x f = W^T e$} ([shift={(-0,-0.1)}]x.east);
+    \draw ([shift={(-0.3,-0.1)}]op1.south) edge[gradedge] node[gradnode,xshift=0.5cm,yshift=-1cm] {\footnotesize $\nabla_W f = ex^T$} ([shift={(-0.1,0.9)}]y.east);
+\end{tikzpicture}
+\caption{The computational graph for matrix-vector product, indicated using $@$ (inspired from NumPy notation) with the inputs: matrix $W$ and vector $x$. (Note: $e$ is a vector of all ones of appropriate dimension.)}
+\label{fig:10}
+\end{figure}
+
+For some $W \in \mathbb{R}^{m \times n}$ and $x \in \mathbb{R}^n$, consider the vector-valued function (a commonly used affine transformation in neural nets)
+$$
+f(W, x) = Wx,
+$$
+whose output is a vector in $\mathbb{R}^m$. Noting that $f_i = \sum_{j=1}^n w_{ij} x_j$, $\nabla_x f$ can be computed as
+$$
+\renewcommand{\arraystretch}{2}
+\nabla_x f = \J_f^T \nabla f =
+\begin{bmatrix}
+    \dfrac{\partial f_1}{\partial x_1} & \dfrac{\partial f_1}{\partial x_2} & \cdots & \dfrac{\partial f_1}{\partial x_n} \\
+    \vdots & \vdots & \ddots & \vdots \\
+    \dfrac{\partial f_m}{\partial x_1} & \dfrac{\partial f_m}{\partial x_2} & \cdots & \dfrac{\partial f_m}{\partial x_n}
+\end{bmatrix}^T e
+\renewcommand{\arraystretch}{1.5}
+= \begin{bmatrix}
+    w_{11} & w_{12} & \cdots & w_{1n} \\
+    w_{21} & w_{22} & \cdots & w_{2n} \\
+    \vdots & \vdots & \ddots & \vdots \\
+    w_{m1} & w_{m2} & \cdots & w_{mn} \\
+\end{bmatrix}^T e = W^T e
+$$
+where $e \in \mathbb{R}^n$ is a vector of all ones. For $\nabla_W$, let us flatten $W$ using the row major as
+$$
+\widetilde{w} = \begin{bmatrix}
+    w_{11} & \cdots & w_{1n} & w_{21} & \cdots & w_{2n} & \cdots & w_{m1} & \cdots & w_{mn}
+    \end{bmatrix}^T
+$$
+Now let's use $\widetilde{w}$ instead of $W$ (we'll reshape later) and compute $\nabla_{\widetilde{w}} f$ just as we did with $x$:
+\begin{align*}
+\renewcommand{\arraystretch}{2}
+\nabla_{\widetilde{w}} f = \J_f^T \nabla f &=
+\begin{bmatrix}
+    \dfrac{\partial f_1}{\partial w_{11}} & \cdots & \dfrac{\partial f_1}{\partial w_{1n}} & \dfrac{\partial f_1}{\partial w_{21}} & \cdots & \dfrac{\partial f_1}{\partial w_{2n}} & \cdots & \dfrac{\partial f_1}{\partial w_{m1}} & \cdots & \dfrac{\partial f_1}{\partial w_{mn}} \\
+    \vdots & \ddots & \vdots & \vdots & \ddots & \vdots & \ddots &\vdots & \ddots & \vdots \\
+    \dfrac{\partial f_m}{\partial w_{11}} & \cdots & \dfrac{\partial f_m}{\partial w_{1n}} & \dfrac{\partial f_m}{\partial w_{21}} & \cdots & \dfrac{\partial f_m}{\partial w_{2n}} & \cdots & \dfrac{\partial f_m}{\partial w_{m1}} & \cdots & \dfrac{\partial f_m}{\partial w_{mn}} 
+\end{bmatrix}^T e \\
+\renewcommand{\arraystretch}{1.5}
+&= \begin{bmatrix}
+    x_1 & \cdots & x_n & 0 & \cdots & 0 & \cdots & 0 & \cdots & 0 \\
+    0 & \cdots & 0 & x_1 & \cdots & x_n & \cdots & 0 & \cdots & 0 \\
+    \vdots & \ddots & \vdots & \vdots & \ddots & \vdots & \ddots &\vdots & \ddots & \vdots \\
+    0 & \cdots & 0 & 0 & \cdots & 0 & \cdots & x_1 & \cdots & x_n \\
+\end{bmatrix}^T e \\
+&= \begin{bmatrix}
+    x_1 & \cdots & x_n & x_1 & \cdots & x_n & \cdots & x_1 & \cdots & x_n
+\end{bmatrix}^T.
+\end{align*}
+
+Since $\widetilde{w}$ is a row-major ordering of $W$, we can rearrange $\nabla_{\widetilde{w}} f$ accordingly to get 
+$$
+\nabla_W f = \begin{bmatrix}
+    x_1 & x_2 & \cdots & x_n \\
+    x_1 & x_2 & \cdots & x_n \\
+    \vdots & \vdots & \ddots & \vdots \\
+    x_1 & x_2 & \cdots & x_n \\
+\end{bmatrix} = ex^T.
+$$
+
+The computational graph associated with the matrix-vector product is shown in Figure~\ref{fig:10}. You can see that our reasoning of multiply gate being a cross-amplifier still holds!
+
+An important thing to note here: given that our update rule (\ref{eq:1}) adds some scalar multiple of the gradient to the input being updated, it's expected that the dimensions of the gradient, say at $x$, match with the dimensions of $x$. You can verify that this is true for $f(W, x) = Wx$. This process of checking dimensions comes in quite handy---for instance, consider computing the gradients for matrix-matrix multiplication $f(X, W) = XW$ for $X \in \mathbb{R}^{m \times n}$ and $W \in \mathbb{R}^{n \times p}$. We make the following observations: 1) multiply gate is a cross-amplifier, so the gradient with respect to $W$ must include $X$ and vice versa, 2) the downstream gradient at the output $\nabla f \in \mathbb{R}^{m \times p}$ (the same shape as the output), and 3) the gradients with respect to the inputs must be the same shape as the inputs. By just matching the dimensions, we have 
+\begin{align*}
+\nabla_X f &= \nabla f W^T, \\
+\nabla_W f &= X^T \nabla f. \\
+\end{align*}
+
+This is not to say that the gradients can be obtained just by dimension matching, but to present a powerful tool for debugging.

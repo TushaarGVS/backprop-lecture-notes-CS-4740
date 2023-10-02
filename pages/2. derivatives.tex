@@ -1,0 +1,221 @@
+\section{What are derivatives?}
+\label{sec:2}
+
+Let's recap what (partial) derivatives tell us: they indicate the behavior (rate of change) of a function $f$ in an infinitesimally small region surrounding a given point. Simply put
+\begin{align}
+\label{eq:3}
+    \left.\frac{df}{dx}\right\vert_{x = x_0} = f'(x_0) = \lim_{h \rightarrow 0} \frac{f(x_0 + h) - f(x_0)}{h},
+\end{align}
+for some small $h = \mathcal{O}(10^{-5})$. From Taylor remainder theorem, we can expand $f(x)$ about $x_0$ as
+$$
+    f(x) = f(x_0) + f'(x_0) (x - x_0) + \frac{f''(\xi)}{2} (x - x_0)^2,
+$$
+for some $\xi$ between $x_0$ and $x$. Now using $x = x_0 + h$ above, have $f(x_0 + h) - f(x_0)$ as
+\begin{align*}
+    f(x_0 + h) - f(x_0) &= f'(x_0) h + \frac{f''(\xi)}{2} h^2 \\
+    \Rightarrow f(x_0 + h) - f(x_0) - \frac{f''(\xi)}{2} h^2 &= f'(x_0) h \\
+    \Rightarrow \frac{f(x_0 + h) - f(x_0)}{h} - \frac{f''(\xi)}{2} h &= f'(x_0).
+\end{align*}
+If we use a first-order approximation of $f$, we can ignore ``$(f''(\xi)/2) h$'' term, resulting in $\mathcal{O}(h)$ error in our derivative approximation. We can further refine this approximation by considering the symmetric or centered difference, which gives us
+\begin{align}
+\label{eq:4}
+    \left.\frac{df}{dx}\right\vert_{x = x_0} = f'(x_0) = \lim_{h \rightarrow 0} \frac{f(x_0 + h) - f(x_0 - h)}{2h}.
+\end{align}
+Again, from the Taylor remainder theorem, for some $\xi$ between $x_0$ and $x_0 + h$ and $\zeta$ between $x_0 - h$ and $x_0$, we have
+\begin{align*}
+    f(x_0 + h) &= f(x_0) + f'(x_0) h + \frac{f''(x_0)}{2}h^2 + \frac{f'''(\xi)}{6}h^3 \\
+    f(x_0 - h) &= f(x_0) - f'(x_0) h + \frac{f''(x_0)}{2}h^2 - \frac{f'''(\zeta)}{6}h^3 \\
+    \Rightarrow \frac{f(x_0 + h) - f(x_0 - h)}{2h} - \frac{f'''(\xi) + f'''(\zeta)}{12} h^2 &= f'(x_0).
+\end{align*}
+Using the second-order approximation and ignoring higher-order terms results in (\ref{eq:4}) with $\mathcal{O}(h^2)$ error (as opposed to $\mathcal{O}(h)$ of linear approximation shown in (\ref{eq:3})).
+
+\subsection{Interpreting derivatives}
+\label{sec:2.1}
+
+Let's consider the simple example of $f(x, y) = xy$ at $x_0 = -3$ and $y_0 = 2$; $f(-3, 2) = -6$, for which we have
+\begin{align}
+    \label{eq:5} \frac{\partial f}{\partial x} &= y = 2, \\
+    \label{eq:6} \frac{\partial f}{\partial y} &= x = -3.
+\end{align}
+
+What do the partial derivatives indicate?---(\ref{eq:5}) above indicates that if $x$ increases by a factor of $1$, then $f(x, y)$ increases (positive sign of $\partial f/\partial x$) by a factor of $2$. This can be seen from rearranging (\ref{eq:3}) as 
+$$
+    f(x_0 + h) = f(x_0) + \frac{\partial f}{\partial x} h.
+$$
+For example, $x_0 = -3 + 1 = -2$ (increased by $1$) and $y_0 = 2$ results in $f(-2, 2) = -4 = f(-3, 2) + 2$ (increased by $2$). Similarly, (\ref{eq:6}) indicates that if $y$ increased by a factor of $1$, then $f(x, y)$ decreases (negative sign of $\partial f/\partial y$) by a factor of $3$. For example, $x_0 = -3$ and $y_0 = 2 + 1 = 3$ (increased by $1$) results in $f(-3, 3) = -9 = f(-3, 2) - 3$ (decreased by $3$). Hence, the derivative is an indicator of how sensitive the function is to the changes in the input. As noted in (\ref{eq:2}), the gradient is a vector of partial derivatives; hence 
+$$
+    \nabla f = \begin{bmatrix}
+    y \\
+    x
+    \end{bmatrix}.
+$$
+
+Let us consider another commonly-used function $f(x, y) = x + y$, for which we have
+\begin{align}
+    \label{eq:7} \frac{\partial f}{\partial x} &= 1, \\
+    \label{eq:8} \frac{\partial f}{\partial y} &= 1.
+\end{align}
+
+From (\ref{eq:7}) and (\ref{eq:8}), we note that the rate of change of $f(x, y) = x + y$ is independent of the values of $x_0$ and $y_0$. This is in line with the expectation that increasing $x_0$ or $y_0$ increases $f$ independent of what $x_0$ and $y_0$ were (unlike with the multiplication).
+
+Finally, given that we often work with ``max'' functions (e.g., ReLU, arg max, softmax, etc.) in evaluating models, let us consider $f(x, y) = \max(x, y)$, for which we have
+\begin{align}
+    \label{eq:9} \frac{\partial f}{\partial x} &= 1\{x \geq y\}, \\
+    \label{eq:10} \frac{\partial f}{\partial y} &= 1\{y \geq x\},
+\end{align}
+where $1\{\cdot\}$ is the indicator function. From (\ref{eq:9}) and (\ref{eq:10}), we can infer that the rate of change depends on the larger of $x$ and $y$. Intuitively this makes sense---consider $x_0 = 10$ and $y_0 = 1$, then $f(x, y)$ is only sensitive to (small; $\lim_{h \rightarrow 0}$) perturbations in $x_0$ and not $y_0$.
+
+\subsection{How to differentiate?}
+\label{sec:2.2}
+
+Let us proceed to consider compound expressions involving multiple compositions. For example, consider $f(x, y, z) = (x + y)z$; how would one go about computing $\nabla f$? In this subsection, we will look at ways of computing derivatives for compound expressions.
+
+\subsubsection{Symbolic differentiation}
+\label{sec:2.2.1}
+
+The easiest (to think!) is probably to draw from our calculus knowledge and just differentiate the given $f$. For $f(x, y, z) = (x + y)z$, we have
+$$
+    \renewcommand{\arraystretch}{2.3}
+    \nabla f = \begin{bmatrix}
+    \dfrac{\partial f}{\partial x} \\
+    \dfrac{\partial f}{\partial y} \\
+    \dfrac{\partial f}{\partial z}
+    \end{bmatrix} 
+    \renewcommand{\arraystretch}{1}
+    = \begin{bmatrix}
+    z \\
+    z \\
+    x + y
+    \end{bmatrix}.
+    \renewcommand{\arraystretch}{1.5}
+$$
+
+What we just did is often referred to as \textit{symbolic} differentiation. The idea is to express $f$ as single function of some ``symbols'' and then using product rule, chain rule, etc., to differentiate that expression with respect to those symbols. Now, we have a way of computing the gradient, but is symbolic differentiation the most optimal way? Consider the following example 
+$$
+    \dfrac{d}{dx} f(g(h(x))) = f'(g(h(x)))\, g'(h(x))\, h'(x).
+$$
+If special care is not taken, we (our code) would end up computing $h(x)$ twice! This can easily become intractable as the number of chain rule applications increase, and the resultant code could become asymptotically slower. Hence, converting the (often complex) symbolic differentiation output into code can be challenging. 
+
+\subsubsection{Numerical differentiation}
+\label{sec:2.2.2}
+
+Let's try a different approach: we will approximate the derivative using a second-order Taylor approximation (symmetric difference version) shown in (\ref{eq:4}). This is often known as \textit{numerical} differentiation. Running numerical differentiation on $f(x, y, z) = (x + y) z$ at $(x_0, y_0, z_0) = (-2, 5, -4)$ gives us
+$$
+    \renewcommand{\arraystretch}{2.3}
+    \nabla f = \begin{bmatrix}
+    \dfrac{\partial f}{\partial x} \\
+    \dfrac{\partial f}{\partial y} \\
+    \dfrac{\partial f}{\partial z}
+    \end{bmatrix} 
+    = \begin{bmatrix}
+    \dfrac{((x_0 + h) + y_0) z_0 - ((x_0 - h) + y_0) z_0}{2h} \\
+    \dfrac{(x_0 + (y_0 + h)) z_0 - (x_0 + (y_0 - h)) z_0}{2h} \\
+    \dfrac{(x_0 + y_0)(z_0 + h) - (x_0 + y_0)(z_0 - h)}{2h}
+    \end{bmatrix} 
+    = \begin{bmatrix}
+    \dfrac{2h (z_0)}{2h} \\
+    \dfrac{2h (z_0)}{2h} \\
+    \dfrac{2h (x_0 + y_0)}{2h}
+    \end{bmatrix}.
+    \renewcommand{\arraystretch}{1.5}
+$$
+
+For the above example, in exact arithmetic, $\nabla f$ obtained from numerical differentiation would exactly equal the one from symbolic differentiation. However, we deal with floating-point arithmetic on computers,\footnote{What Every Computer Scientist Should Know About Floating-Point Arithmetic: \url{https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html}.} and subtracting two nearly equal numbers, at least one of which has some round-off error (a cardinal sin of numerical analysis), results in catastrophic cancellation. To following Python code showcases the ``quirks'' of floating-point arithmetic:
+\begin{lstlisting}
+# Fix the values of y, z.
+y0, z0 = 5, -4
+
+def f(x): 
+    return (x + y0) * z0
+
+def symbolic_df(x):
+    """Returns the symbolic derivative of f(x)."""
+    return z0
+
+def numerical_df(x, h=1e-5):
+    """Returns the numerical derivative of f(x)."""
+    return (f(x + h) - f(x - h)) / (2 * h)
+
+# The assertion below fails!
+assert numerical_df(-2, h=1e-5) == symbolic_df(-2)
+\end{lstlisting}
+
+Errors resulting from floating-point limitations are referred to as round-off errors, and the associated numerical imprecision compounds as the number of operations increase. An important thing to note here is that numerical differentiation can deviate from symbolic differentiation even in exact arithmetic; this happens when our second-order approximation can't exactly model $f$ (e.g., $f(x) = x^3$). Such errors are known as truncation errors.
+
+Other concerns with numerical differentiation include: lack of clear guidelines on setting $h$,\footnote{\url{https://en.wikipedia.org/wiki/Numerical_differentiation\#Step_size}.} no ways of dealing with a non-smooth $f$, and the computational expense of evaluating $f$ twice (once with $x + h$ and once with $x - h$).
+
+\subsubsection{Automatic differentiation}
+\label{sec:2.2.3}
+
+Our goal is to compute derivatives with minimal overhead (like numerical differentiation) and no loss in precision (like symbolic differentiation). To this end, we'll differentiate by recursively applying the chain rule---this is commonly known as \textit{automatic} (or algorithmic) differentiation. Consider the example $f(x, y, z) = (x + y) z$, which is equivalent to
+\begin{align*}
+    v_1 &= x + y, \\
+    f(v_1, z) &= v_1 z,
+\end{align*}
+and can be expressed as a \textit{computational graph} (sometimes referred to as the computational circuit) shown in Figure~\ref{fig:1}.
+
+\begin{figure}[!t]
+\centering
+\begin{tikzpicture}[align=center,node distance=1.5cm and 1.5cm]
+    \node[] (x) {$x$};
+    \node[below=of x] (y) {$y$};
+    \node[below=of y] (z) {$z$};
+    \node[opnode,right=of x,yshift=-0.7cm] (op1) {$+$};
+    \node[opnode,right=of op1,yshift=-0.7cm] (op2) {$\times$};
+    \node[right=of op2] (f) {$f(x, y, z)$};
+
+    \draw (x) edge[edge] (op1);
+    \draw (y) edge[edge] (op1);
+    \draw (op1) edge[edge] node[yshift=0.3cm] {$v_1$} (op2);
+    \draw (z) edge[edge] (op2);
+    \draw (op2) edge[edge] (f);
+\end{tikzpicture}
+\caption{The computational graph shown a visual representation of $f(x, y, z) = (x + y) z$. The operators are encircled $\odot$ and the inputs/outputs are indicated as plain text.}
+\label{fig:1}
+\end{figure}
+
+From $\S$\ref{sec:2.1}, we know how to compute the derivatives of the above (simple) expressions independently. Let's move from the left (inputs) to right (outputs) in the computational graph: for each input (say, $x$), we trace out the input-output path and then compute 1) the corresponding node output, and 2) the gradient with respect to the \textit{preceding intermediate} in the path. For the computational graph of $f(x, y, z) = (x + y) z$ shown in Figure~\ref{fig:1}, we have
+\begin{align*}
+    x = x_0, &\, \frac{\partial x}{\partial x} = 1, \\
+    v_1 = x + y = x_0 + y_0, &\,\frac{\partial v_1}{\partial x} = 1, \\
+    f = v_1 z = v_1 z_0, &\,\frac{\partial f}{\partial v_1} = z = z_0.
+\end{align*}
+Now, using chain rule,
+$$
+    \frac{\partial f}{\partial x} = \frac{\partial x}{\partial x}\, \frac{\partial v_1}{\partial x}\, \frac{\partial f}{\partial v_1} = z_0.
+$$
+
+In practice, a chain rule is applied at every step and not just at the end---in the above example, when $f = v_1z_0$ is computed, both $\partial f / \partial v_1$ and $\partial f / \partial x$ are computed (in that order). This process of forward gradient ``accumulation'' is illustrated for the input $x$ in Figure~\ref{fig:2}. We can repeat the process for other inputs $y, z$ to yield
+\begin{align*}
+    \frac{\partial f}{\partial y} &= \left(\left(\frac{\partial y}{\partial y}\right) \frac{\partial v_1}{\partial y}\right) \frac{\partial f}{\partial v_1} = z_0, \\
+    \frac{\partial f}{\partial z} &= \left(\frac{\partial z}{\partial z}\right) \frac{\partial f}{\partial z} = v_1 = x_0 + y_0.
+\end{align*}
+
+\begin{figure}[!t]
+\centering
+\begin{tikzpicture}[align=center,node distance=1.5cm and 1.5cm]
+    \node[] (x) {$x$};
+    \node[below=of x] (y) {$y$};
+    \node[below=of y] (z) {$z$};
+    \node[opnode,right=of x,yshift=-0.7cm] (op1) {$+$};
+    \node[opnode,right=of op1,yshift=-0.7cm] (op2) {$\times$};
+    \node[right=of op2] (f) {$f(x, y, z)$};
+
+    \draw (x) edge[edge] (op1);
+    \draw (y) edge[edge] (op1);
+    \draw (op1) edge[edge] node[yshift=0.3cm] {$v_1$} (op2);
+    \draw (z) edge[edge] (op2);
+    \draw (op2) edge[edge] (f);
+
+    \draw ([shift={(-0,-0.23)}]x.east) edge[gradedge] node[gradnode,xshift=-0.7cm,yshift=-0.4cm] {\footnotesize $\partial x/\partial x$} (op1.west);
+    \draw ([shift={(-0,-0.27)}]op1.east) edge[gradedge] node[gradnode,xshift=-0.7cm,yshift=-0.4cm] {\footnotesize $\partial v_1/\partial x$} (op2.west);
+    \draw ([shift={(-0,-0.13)}]op2.east) edge[gradedge] node[gradnode,yshift=-0.5cm] {\footnotesize $\partial f/\partial x$} 
+ ([shift={(-0,-0.13)}]f.west);
+\end{tikzpicture}
+\caption{Forward accumulation of gradients is shown using \colorbox{gray!30}{highlighted} text for input $x$, in the computation of $f(x, y, z) = (x + y)z$. In implementation, \textit{dual numbers} are often used to store the node output and the accumulated gradient (e.g., $\langle v_1, \partial v_1 / \partial x\rangle$).}
+\label{fig:2}
+\end{figure}
+
+This way of computing gradients from an input-to-output fashion is known as the \textit{forward mode} (or forward accumulation) automatic differentiation. Notice that a single run of forward mode automatic differentiation results in populating one entry of the gradient vector. More generally, if $f: \mathbb{R}^n \rightarrow \mathbb{R}^m$, then one pass of forward mode populates one column ($m$ entries) of the Jacobian matrix.\footnote{The Jacobian matrix $\J_f \in \mathbb{R}^{m \times n}$ (not to be confused for the cost function $J(\theta)$) of a vector-valued function $f: \mathbb{R}^n \rightarrow \mathbb{R}^m$ is a generalization of the gradient of a scalar-valued function in several variables, which in turn is a generalization of the derivative of a scalar-valued function of a single variable.} Hence, if $n \ll m$, forward mode is quite efficient; however, note that our loss functions often map $\mathbb{R}^n \rightarrow \mathbb{R}$ ($n \gg m$), making forward mode inefficient to use in training models.
+
+To cope with the ``$n \gg m$'' problem, a different approach known as the \textit{reverse mode} automatic differentiation, or commonly referred to (in deep learning communities) as the generalized backpropagation algorithm is used. The following section discusses backpropagation in great detail.

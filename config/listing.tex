@@ -1,0 +1,27 @@
+%% authors: Tushaar Gangavarapu
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage{letltxmacro}
+\LetLtxMacro\oldttfamily\ttfamily
+\DeclareRobustCommand{\ttfamily}{\oldttfamily\csname ttsize\endcsname}
+\newcommand{\setttsize}[1]{\def\ttsize{#1}}
+\usepackage{amsfonts}
+\usepackage{listings}
+\setttsize{\small}
+\lstset{%
+    language=python,%
+    numbers=left,%
+    stepnumber=1,%
+    numberstyle=\ttfamily\scriptsize\color{gray},%
+    basicstyle=\ttfamily,%
+    breaklines=true,%
+    commentstyle=\ttfamily,%
+    columns=flexible,%
+    showstringspaces=false,%
+    showtabs=false,%
+    captionpos=b,%
+    belowskip=1.65pt,%
+    escapeinside={(*@}{@*)},
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

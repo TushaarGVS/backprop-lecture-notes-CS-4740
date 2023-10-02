@@ -1,0 +1,349 @@
+\section{Backpropagation}
+\label{sec:3}
+
+Instead of moving from inputs to outputs (as seen in $\S$\ref{sec:2.2.3}), we will propagate derivatives backward from a given output---this is known as \textit{reverse mode} automatic differentiation or more commonly, backpropagation \cite{goodfellow2016deep,baydin2018automatic}. Consider the same example as before $f(x, y, z) = (x + y) z$, which is equivalent to $v_1 = x + y$, $f(v_1, z) = v_1 z$ (computational graph in Figure~\ref{fig:1}).
+
+Backpropagation runs in two steps: 1) the forward process, where the outputs are computed from left (inputs) to right (outputs), and 2) the backward process where the gradients are computed from right (outputs) to left (inputs) in the computational graph. In our example, the forward process computes $v_1 = x_0 + y_0$ and $f = v_1 z_0$. Once done, we trace the computation graph in a breadth-first fashion, and at each level, we compute the gradient of each \textit{succeeding intermediate} with respect to the nodes at that level:
+\begin{align*}
+    &\frac{\partial f}{\partial f} = 1, \\
+    f = v_1 z \Rightarrow\, & \frac{\partial f}{\partial v_1} = z = z_0, \frac{\partial f}{\partial z} = v_1 = x_0 + y_0, \\
+    v_1 = x + y \Rightarrow\, & \frac{\partial v_1}{\partial x} = 1, \frac{\partial v_1}{\partial y} = 1.
+\end{align*}
+
+This process is illustrated in Figure~\ref{fig:3}. Now using chain rule, 
+\begin{align*}
+    \frac{\partial f}{\partial x} &= \frac{\partial f}{\partial f}\, \frac{\partial f}{\partial v_1}\, \frac{\partial v_1}{\partial x} = z_0, \\
+    \frac{\partial f}{\partial y} &= \frac{\partial f}{\partial f}\, \frac{\partial f}{\partial v_1}\, \frac{\partial v_1}{\partial y} = z_0, \\
+    \frac{\partial f}{\partial z} &= \frac{\partial f}{\partial f}\, \frac{\partial f}{\partial z} = x_0 + y_0.
+\end{align*}
+
+\begin{figure}[!t]
+\centering
+\begin{tikzpicture}[align=center,node distance=1.5cm and 1.5cm]
+    \node[] (x) {$x$};
+    \node[below=of x] (y) {$y$};
+    \node[below=of y] (z) {$z$};
+    \node[opnode,right=of x,yshift=-0.7cm] (op1) {$+$};
+    \node[opnode,right=of op1,yshift=-0.7cm] (op2) {$\times$};
+    \node[right=of op2] (f) {$f(x, y, z)$};
+
+    \draw (x) edge[edge] (op1);
+    \draw (y) edge[edge] (op1);
+    \draw (op1) edge[edge] node[yshift=0.3cm] {$v_1$} (op2);
+    \draw (z) edge[edge] (op2);
+    \draw (op2) edge[edge] (f);
+
+    \draw ([shift={(-0,-0.13)}]f.west) edge[gradedge] node[gradnode,yshift=-0.5cm] {\footnotesize $\partial f/\partial f$} 
+([shift={(-0,-0.13)}]op2.east);
+    \draw (op2.west) edge[gradedge] node[gradnode,xshift=-0.7cm,yshift=-0.4cm] {\footnotesize $\partial f/\partial v_1$} ([shift={(-0,-0.27)}]op1.east);
+    \draw ([shift={(-0,-0.41)}] op2.west) edge[gradedge] node[gradnode,yshift=-0.4cm] {\footnotesize $\partial f/\partial z$} (z.east);
+    \draw (op1.west) edge[gradedge] node[gradnode,xshift=-0.7cm,yshift=-0.4cm] {\footnotesize $\partial v_1/\partial x$} ([shift={(-0,-0.23)}]x.east);
+    \draw ([shift={(-0,-0.41)}]op1.west) edge[gradedge] node[gradnode,xshift=-1cm,yshift=-1cm] {\footnotesize $\partial v_1/\partial y$} (y.east);
+\end{tikzpicture}
+\caption{(Almost) backpropagation for $f(x, y, z) = (x + y) z$: the forward process (indicated using a solid $\rightarrow$) computes values of $v_1$ and $f$ for a given $(x_0, y_0, z_0)$ before the backward process (indicated using a dashed $\dashleftarrow$) computes the gradients  shown in \colorbox{gray!30}{highlighted} text. The gradients are thought of as flowing backwards in the computational circuit.}
+\label{fig:3}
+\end{figure}
+
+In practice, a chain rule is applied at every level, not just at the end---in the above example, when we compute $\partial v_1/\partial x$ and $\partial v_1/\partial y$, we also compute $\partial f/\partial x$ and $\partial f/\partial y$ using the gradients at the previous step. (Hence the use of ``almost'' in Figure~\ref{fig:3} caption.)
+
+Notice that a single run of backward pass computes the entire gradient vector. More generally, if $f: \mathbb{R}^n \rightarrow \mathbb{R}^m$, then a single backward pass populates one row ($n$ entries) of the Jacobian matrix. Given that we (deep learning) often deal with updating the gradient with respect to a single scalar loss, we have $n \gg m = 1$, reverse mode automatic differentiation is the default choice in most deep learning frameworks.
+
+Without going into much detail, various frameworks of reverse mode automatic differentiation differ in 1) the way they build the compute graph, i.e., static (e.g., TensorFlow v$1.$x) or dynamic (e.g., PyTorch), and 2) the way of materializing the forward graph, i.e., eager (e.g., PyTorch) or lazy (e.g., DyNet). Since we will be working a lot with PyTorch, it is recommended to read the distinguishing features of PyTorch noted in \cite{paszke2017automatic}.
+
+As an aside: when you run \texttt{loss.backward()} in PyTorch, the \texttt{torch.autodiff} module computes $\partial f / \partial \ast$ for all nodes (indicated using $\ast$) in the compute graph. We can see this in action for $f(x, y, z) = (x + y) z$ at $(x_0, y_0, z_0) = (-2, 5, -4)$:
+
+\begin{lstlisting}
+import torch
+
+x0 = torch.tensor(-2.0, requires_grad=True)
+y0 = torch.tensor(5.0, requires_grad=True)
+z0 = torch.tensor(-4.0, requires_grad=True)
+
+def f(x, y, z):
+    return (x + y) * z
+
+# Compute the gradients by calling ".backward()".
+f(x0, y0, z0).backward()
+
+# Use ".grad()" to make access the gradients.
+assert x0.grad == -4.0 and y0.grad == -4.0 and z0.grad == 3.0
+\end{lstlisting}
+
+\begin{figure}[!t]
+\centering
+\begin{tikzpicture}[align=center,node distance=1.5cm and 1.5cm]
+    \node[] (x) {$x=-2$};
+    \node[below=of x] (y) {$y=5$};
+    \node[below=of y] (z) {$z=-4$};
+    \node[opnode,right=of x,yshift=-0.7cm] (op1) {$+$};
+    \node[opnode,right=of op1,yshift=-0.7cm] (op2) {$\times$};
+    \node[right=of op2] (f) {$f(-2, 5, -4) = -12$};
+
+    \draw (x) edge[edge] (op1);
+    \draw (y) edge[edge] (op1);
+    \draw (op1) edge[edge] node[yshift=0.4cm] {$v_1 = 3$} (op2);
+    \draw (z) edge[edge] (op2);
+    \draw (op2) edge[edge] (f);
+
+    \draw ([shift={(-0,-0.13)}]f.west) edge[gradedge] node[gradnode,yshift=-0.5cm] {\footnotesize $\partial f/\partial f = 1$} 
+([shift={(-0,-0.13)}]op2.east);
+    \draw (op2.west) edge[gradedge] node[gradnode,xshift=0.7cm,yshift=1.2cm] {\footnotesize $\partial f/\partial v_1 = -4$} ([shift={(-0,-0.27)}]op1.east);
+    \draw ([shift={(-0,-0.41)}] op2.west) edge[gradedge] node[gradnode,xshift=0.1cm,yshift=-0.4cm] {\footnotesize $\partial f/\partial z = 3$} ([shift={(-0,0.25)}]z.east);
+    \draw (op1.west) edge[gradedge] node[gradnode,xshift=-1.7cm,yshift=-0.2cm] {\footnotesize $\partial f/\partial x = -4$} ([shift={(-0,-0.33)}]x.east);
+    \draw ([shift={(-0,-0.41)}]op1.west) edge[gradedge] node[gradnode,xshift=-1.1cm,yshift=-1.2cm] {\footnotesize $\partial f/\partial y = -4$} ([shift={(-0,0.15)}]y.east);
+\end{tikzpicture}
+\caption{The forward ($\rightarrow$) and backward ($\dashleftarrow$) graphs for $f(x, y, z) = (x + y) z$ at $(x_0, y_0, z_0) = (-2, 5, -4)$; the gradients  shown in \colorbox{gray!30}{highlighted} text.}
+\label{fig:4}
+\end{figure}
+
+Figure~\ref{fig:4} shows the exact forward and backward graphs for the code above.
+
+\subsection{Computational graphs as gated circuits}
+\label{sec:3.1}
+
+For the ease of understanding, we will often think of backpropagation as consisting of a local and global step. Locally, each operator (or gate) gets a set of inputs $x_i$s and can compute: 1) the output $v_j$ of applying the operation, and 2) the ``local'' gradient $\partial v_j / \partial x_i$ for each input $x_i$. This is synonymous with Figure~\ref{fig:3} (almost backpropagation). Notice that one gate can do the above independent of other gates in the circuit! In the global step, each gate will eventually learn the backward gradient flowing in the circuit---chain rule indicates that this backward-flowing gradient (with respect to the output) is to multiplied with the local gradient at the gate.
+
+To make this more concrete, consider the local circuit corresponding to the add gate in Figure~\ref{fig:4}---the add gate gets the inputs $x = -2$, $y = 5$ and the output $v_1 = 3$ is computed. Since this is an add gate, we know the local gradients are $\partial v_1 / \partial x = \partial v_1 / \partial y = 1$. The rest of the forward process runs as expected, resulting in $f(-2, 5, -4) = -12$. In the backward pass, the circuit is notified that the backward-flowing gradient for the output of the add gate (at $v_1$) is $-4$. If the goal of the circuit is to get higher values for $f$, then we can think of $\partial f / \partial v_1 = -4$ as wanting $v_1$ to be lower (negative sign) by a force of $4$. The add gate takes this gradient and distributes it to $x$ and $y$ (equally), i.e., $\partial v_1 / \partial x = \partial v_1 / \partial y = -4$. This makes sense intuitively: increasing $x$ or $y$ results in an increase in $v_1$, which would result in $f(x, y, -4)$ decreasing.
+
+Backpropagation is often thought of as communication between gates of the computational graph, with gradients as the signal, and the goal of making the final output higher; the magnitude and sign of the gradient indicate the strength and contributions of the signal.
+
+\subsection{Building the computational graph}
+\label{sec:3.2}
+
+So far, we have seen how to compute gradients for a given computation graph. In this subsection we will explore how a computational graph is constructed. Any differentiable function can act as a gate, and several gates can be grouped into a single gate or a single gate can be decomposed into multiple gates (often referred to as ``modularity'') as needed. Consider the following example (of logistic regression):
+\begin{align}
+\label{eq:11}
+f\left(\begin{bmatrix}w_0 \\ w_1 \\ w_2\end{bmatrix}, \begin{bmatrix}1 \\ x_1 \\ x_2\end{bmatrix}\right) = \frac{1}{1 + \exp(-(w_0 + w_1 x_1 + w_2 x_2))}.
+\end{align}
+
+\begin{figure}[!t]
+\centering
+\begin{tikzpicture}[align=center,node distance=1.5cm and 1.5cm]
+    \node[] (w0) {$w_0=-3$};
+    \node[below=of w0] (w1) {$w_1=2$};
+    \node[below=of w1] (x1) {$x_1=-1$};
+    \node[below=of x1] (w2) {$w_2=-3$};
+    \node[below=of w2] (x2) {$x_2=-2$};
+    \node[opnode,right=of w1,yshift=-0.8cm] (op1) {$\times$};
+    \node[opnode,right=of w2,yshift=-0.8cm] (op2) {$\times$};
+    \node[opnode,right=of op1,yshift=-2cm] (op3) {$+$};
+    \node[opnode,right=of op1,xshift=2cm] (op4) {$+$};
+    \node[opnode,below=of op4] (op5) {$\times$-1};
+    \node[opnode,right=of op5] (op6) {$\exp$};
+    \node[opnode,right=of op6] (op7) {$+1$};
+    \node[opnode,right=of op7] (op8) {$1/$};
+    \node[below=of op8,yshift=-1.5cm] (f) {$f = 0.73$};
+
+    \draw (w1) edge[edge] (op1);
+    \draw (x1) edge[edge] (op1);
+    \draw (w2) edge[edge] (op2);
+    \draw (x2) edge[edge] (op2);
+    \draw (op1) edge[edge] node[xshift=-0.9cm,yshift=-0.3cm] {$v_1 = -2$} (op3);
+    \draw (op2) edge[edge] node[xshift=-0.8cm,yshift=0.1cm] {$v_2 = 6$} (op3);
+    \draw (w0) edge[edge] (op4);
+    \draw (op3) edge[edge] node[xshift=-0.3cm,yshift=0.6cm] {$v_3 = 4$} (op4);
+    \draw (op4) edge[edge] node[xshift=0.7cm] {$v_4 = 1$} (op5);
+    \draw (op5) edge[edge] node[yshift=-0.7cm] {$v_5 = -1$} (op6);
+    \draw (op6) edge[edge] node[yshift=-0.7cm] {$v_6 = 0.37$} (op7);
+    \draw (op7) edge[edge] node[yshift=-0.7cm] {$v_7 = 1.37$} (op8);
+    \draw (op8) edge[edge] (f);
+    
+    \draw ([shift={(-0.1,-0)}]f.north) edge[gradedge] node[gradnode,xshift=0.3cm,yshift=-0.7cm] {\footnotesize $\partial f/\partial f = 1$} ([shift={(-0.1,-0)}]op8.south);
+    \draw ([shift={(-0,-0.1)}]op8.west) edge[gradedge] node[gradnode,yshift=-1.5cm] {\footnotesize $\partial f/\partial v_7 =$\\$-0.53$} ([shift={(-0,-0.1)}]op7.east);
+    \draw ([shift={(-0,-0.1)}]op7.west) edge[gradedge] node[gradnode,yshift=-1.5cm] {\footnotesize $\partial f/\partial v_6 =$\\$-0.53$} ([shift={(-0,-0.1)}]op6.east);
+    \draw ([shift={(-0,-0.1)}]op6.west) edge[gradedge] node[gradnode,yshift=-1.5cm] {\footnotesize $\partial f/\partial v_5 =$\\$-0.20$} ([shift={(-0,-0.1)}]op5.east);
+    \draw ([shift={(-0.1,-0)}]op5.north) edge[gradedge] node[gradnode,xshift=2cm,yshift=0.6cm] {\footnotesize $\partial f/\partial v_4 = 0.20$} ([shift={(-0.1,-0)}]op4.south);
+    \draw ([shift={(-0,0.05)}]op4.west) edge[gradedge] node[gradnode,xshift=0.6cm,yshift=0.6cm] {\footnotesize $\partial f/\partial w_0 = 0.20$} ([shift={(0.7,-0.1)}]w0.south);
+    \draw ([shift={(-0.3,0)}]op4.south) edge[gradedge] node[gradnode,xshift=-0.6cm,yshift=0.1cm] {\footnotesize $\partial f/\partial v_3 = 0.20$} ([shift={(0,0.3)}]op3.east);
+    \draw ([shift={(-0,0.2)}]op3.west) edge[gradedge] node[gradnode,xshift=-0.6cm,yshift=-0.8cm] {\footnotesize $\partial f/\partial v_1 = 0.20$} ([shift={(-0.2,-0.4)}]op1.east);
+    \draw ([shift={(-0.3,0)}]op3.south) edge[gradedge] node[gradnode,xshift=1cm,yshift=-0.2cm] {\footnotesize $\partial f/\partial v_2 =$\\$0.20$} ([shift={(0,0.3)}]op2.east);
+    \draw ([shift={(-0,0.01)}]op1.west) edge[gradedge] node[gradnode,xshift=-1cm,yshift=1.2cm] {\footnotesize $\partial f/\partial w_1 = -0.20$} ([shift={(-0.2,-0.3)}]w1.east);
+    \draw ([shift={(-0,-0.35)}]op1.west) edge[gradedge] node[gradnode,xshift=-1.2cm,yshift=0.2cm] {\footnotesize $\partial f/\partial x_1 = 0.39$} ([shift={(-0.1,0.26)}]x1.east);
+    \draw ([shift={(-0,0.01)}]op2.west) edge[gradedge] node[gradnode,xshift=-1cm,yshift=1.2cm] {\footnotesize $\partial f/\partial w_1 = -0.39$} ([shift={(-0.2,-0.3)}]w2.east);
+    \draw ([shift={(-0,-0.35)}]op2.west) edge[gradedge] node[gradnode,xshift=-1.2cm,yshift=0.2cm] {\footnotesize $\partial f/\partial x_1 = -0.59$} ([shift={(-0.1,0.23)}]x2.east);
+\end{tikzpicture}
+\caption{A fine-grained computational graph for a logistic regressor (or a two-dimensional neuron) with inputs $(x_1, x_2)$ and learnable weights $(w_0, w_1, w_2)$.}
+\label{fig:5}
+\end{figure}
+
+In the most fine-grained form, the computational graph for (\ref{eq:11}) is shown in Figure~\ref{fig:5}. In addition to the operations discussed in $\S$\ref{sec:2.1}, we have
+\begin{align*}
+    f(x) = \frac{1}{x}, &\quad f'(x) = \frac{-1}{x^2}; \\
+    f_\alpha(x) = \alpha + x, &\quad f_\alpha'(x) = 1; \\
+    f(x) = \exp(x), &\quad f'(x) = \exp(x); \\
+    f_\alpha(x) = \alpha x, &\quad f_\alpha'(x) = \alpha;
+\end{align*}
+for some constant $\alpha$. Note that $f_\alpha(\cdot)$ indicates a unary operator that operates on $x$ (input) and uses a pre-set some constant $\alpha$. 
+
+You may recognize the $\sigma(x) = 1/(1+\exp(-x))$ to be the logistic sigmoid function (generalization: softmax) that scales a value to be in $[0, 1]$. The logistic sigmoid appears so often in neural modeling that it might be beneficial (computationally and memory-wise) to just have a sigmoid operation in place of the sequence $-1 \times x \rightarrow \exp(x) \rightarrow x + 1 \rightarrow 1/x$. To this end, let's compute the (symbolic) derivative of $\sigma(x)$ using the chain rule as
+\begin{align*}
+\sigma'(x) &= \frac{\exp(-x)}{(1 + \exp(-x))^2} \\
+&= \frac{1}{1 + \exp(-x)}\,\frac{1 + \exp(-x) - 1}{1 + \exp(-x)} \\
+&= \sigma(x) (1 - \sigma(x)).
+\end{align*}
+
+Now that we know how to compute $\sigma'(x)$, we don't need to maintain the fine granularity in Figure~\ref{fig:5}; Figure~\ref{fig:6} shows the computational graph that uses the $\sigma(x)$ gate as needed. You can verify that Figure~\ref{fig:5} and Figure~\ref{fig:6} are computing the exact same function.
+
+\begin{figure}[!t]
+\centering
+\begin{tikzpicture}[align=center,node distance=1.5cm and 1.5cm]
+    \node[] (w0) {$w_0=-3$};
+    \node[below=of w0] (w1) {$w_1=2$};
+    \node[below=of w1] (x1) {$x_1=-1$};
+    \node[below=of x1] (w2) {$w_2=-3$};
+    \node[below=of w2] (x2) {$x_2=-2$};
+    \node[opnode,right=of w1,yshift=-0.8cm] (op1) {$\times$};
+    \node[opnode,right=of w2,yshift=-0.8cm] (op2) {$\times$};
+    \node[opnode,right=of op1,yshift=-2cm] (op3) {$+$};
+    \node[opnode,right=of op1,xshift=2cm] (op4) {$+$};
+    \node[opnode,below=of op4] (op5) {$\sigma$};
+    \node[right=of op5] (f) {$f = 0.73$};
+
+    \draw (w1) edge[edge] (op1);
+    \draw (x1) edge[edge] (op1);
+    \draw (w2) edge[edge] (op2);
+    \draw (x2) edge[edge] (op2);
+    \draw (op1) edge[edge] node[xshift=-0.9cm,yshift=-0.3cm] {$v_1 = -2$} (op3);
+    \draw (op2) edge[edge] node[xshift=-0.8cm,yshift=0.1cm] {$v_2 = 6$} (op3);
+    \draw (w0) edge[edge] (op4);
+    \draw (op3) edge[edge] node[xshift=-0.3cm,yshift=0.6cm] {$v_3 = 4$} (op4);
+    \draw (op4) edge[edge] node[xshift=0.7cm] {$v_4 = 1$} (op5);
+    \draw (op5) edge[edge] (f);
+    
+    \draw ([shift={(-0,-0.1)}]f.west) edge[gradedge] node[gradnode,xshift=0.3cm,yshift=-0.7cm] {\footnotesize $\partial f/\partial f = 1$} ([shift={(-0,-0.1)}]op5.east);
+    \draw ([shift={(-0.1,-0)}]op5.north) edge[gradedge] node[gradnode,xshift=2cm,yshift=0.6cm] {\footnotesize $\partial f/\partial v_4 = 0.20$} ([shift={(-0.1,-0)}]op4.south);
+    \draw ([shift={(-0,0.05)}]op4.west) edge[gradedge] node[gradnode,xshift=0.6cm,yshift=0.6cm] {\footnotesize $\partial f/\partial w_0 = 0.20$} ([shift={(0.7,-0.1)}]w0.south);
+    \draw ([shift={(-0.3,0)}]op4.south) edge[gradedge] node[gradnode,xshift=-0.6cm,yshift=0.1cm] {\footnotesize $\partial f/\partial v_3 = 0.20$} ([shift={(0,0.3)}]op3.east);
+    \draw ([shift={(-0,0.2)}]op3.west) edge[gradedge] node[gradnode,xshift=-0.6cm,yshift=-0.8cm] {\footnotesize $\partial f/\partial v_1 = 0.20$} ([shift={(-0.2,-0.4)}]op1.east);
+    \draw ([shift={(-0.3,0)}]op3.south) edge[gradedge] node[gradnode,xshift=1cm,yshift=-0.2cm] {\footnotesize $\partial f/\partial v_2 =$\\$0.20$} ([shift={(0,0.3)}]op2.east);
+    \draw ([shift={(-0,0.01)}]op1.west) edge[gradedge] node[gradnode,xshift=-1cm,yshift=1.2cm] {\footnotesize $\partial f/\partial w_1 = -0.20$} ([shift={(-0.2,-0.3)}]w1.east);
+    \draw ([shift={(-0,-0.35)}]op1.west) edge[gradedge] node[gradnode,xshift=-1.2cm,yshift=0.2cm] {\footnotesize $\partial f/\partial x_1 = 0.39$} ([shift={(-0.1,0.26)}]x1.east);
+    \draw ([shift={(-0,0.01)}]op2.west) edge[gradedge] node[gradnode,xshift=-1cm,yshift=1.2cm] {\footnotesize $\partial f/\partial w_1 = -0.39$} ([shift={(-0.2,-0.3)}]w2.east);
+    \draw ([shift={(-0,-0.35)}]op2.west) edge[gradedge] node[gradnode,xshift=-1.2cm,yshift=0.2cm] {\footnotesize $\partial f/\partial x_1 = -0.59$} ([shift={(-0.1,0.23)}]x2.east);
+\end{tikzpicture}
+\caption{A coarse-grained computational graph  with inputs $(x_1, x_2)$ and learnable weights $(w_0, w_1, w_2)$, for a logistic regressor (or a two-dimensional neuron) that uses the logistic sigmoid function $\sigma(x)$.}
+\label{fig:6}
+\end{figure}
+
+Let's see what this looks in Python code (if we weren't using PyTorch and instead designing our own deep learning framework):
+\begin{lstlisting}
+import math
+
+w = [-3, 2, -3]
+x = [-1, -2]
+
+def dot(w, x):
+    """Dot product of w, x."""
+    w_dot_x = 0.0
+    x = [1] + x  # append "1" to the start, complementing bias as w0 in w
+    for (wi, xi) in zip(w, x):
+        w_dot_x = w_dot_x + (wi * xi) 
+    return w_dot_x
+
+def f(w, x):
+    """Logistic sigmoid function."""
+    return 1 / (1 + math.exp(-1 * dot(w, x)))
+
+# Forward pass function output.
+out = f(w, x)
+
+# Backward pass derivatives.
+df_dw_dot_x = out * (1 - out)  # df/dv4
+df_dw = [1.0 * df_dw_dot_x, x[0] * df_dw_dot_x, x[1] * df_dw_dot_x]
+df_dx = [w[1] * df_dw_dot_x, w[2] * df_dw_dot_x]
+
+print("df/dw:", df_dw)
+print("df/dx:", df_dx)
+\end{lstlisting}
+
+\subsection{Branching}
+\label{sec:3.3}
+
+So far we've seen examples of computational graphs without any branching. In this subsection, let's see what happens when an input variable branches out to different parts of the computational graph. To this end, consider the example (evaluated at $(x_0, y_0) = (-1, 2)$)
+$$
+f(x, y) = \frac{x}{x+y}.
+$$
+
+\begin{figure}[!t]
+\centering
+\begin{tikzpicture}[align=center,node distance=1.5cm and 1.5cm]
+    \node[] (x) {$x=-1$};
+    \node[below=of x] (y) {$y=2$};
+    \node[opnode,right=of y] (op1) {$+$};
+    \node[opnode,right=of x,xshift=2cm] (op2) {$/$};
+    \node[right=of op2] (f) {$f(x, y) = -1$};
+
+    \draw (x) edge[edge] (op1);
+    \draw (y) edge[edge] (op1);
+    \draw (x) edge[edge] (op2);
+    \draw (op1) edge[edge] node[xshift=0.8cm,yshift=-0.3cm] {$v_1 = 1$} (op2);
+    \draw (op2) edge[edge] (f);
+    
+    \draw ([shift={(-0,-0.1)}]f.west) edge[gradedge] node[gradnode,xshift=0.3cm,yshift=0.7cm] {\footnotesize $\partial f/\partial f = 1$} ([shift={(-0,-0.1)}]op2.east);
+    \draw ([shift={(-0,-0.1)}]op2.west) edge[gradedge] node[gradnode,xshift=0.3cm,yshift=0.7cm] {\footnotesize $\partial f/\partial x = 1$} ([shift={(-0,-0.1)}]x.east);
+    \draw ([shift={(0.15,-0.5)}]op2.west) edge[gradedge] node[gradnode,xshift=0.8cm,yshift=-0.8cm] {\footnotesize $\partial f/\partial v_1 = 1$} ([shift={(-0,0.25)}]op1.east);
+    \draw ([shift={(0,0.25)}]op1.west) edge[gradedge] node[gradnode,xshift=-0.8cm,yshift=0.1cm] {\footnotesize $\partial f/\partial x = 1$} ([shift={(0.2,0)}]x.south);
+    \draw ([shift={(-0,-0.1)}]op1.west) edge[gradedge] node[gradnode,xshift=-0.4cm,yshift=-0.6cm] {\footnotesize $\partial f/\partial y = 1$} ([shift={(-0,-0.1)}]y.east);
+\end{tikzpicture}
+\caption{The computational graph for $f(x, y) = x / (x + y)$; note the branching at input $x$, resulting in two gradient in-flows (one from divide and one from add).}
+\label{fig:7}
+\end{figure}
+
+As can be seen from the computational graph of $f(x, y)$ shown in Figure~\ref{fig:7}, node $x$ branches, resulting in two incoming gradients at $x$, one from the divide gate and one from the add gate. Following the multivariable chain rule,\footnote{See \url{https://www.cs.toronto.edu/~rgrosse/courses/csc321_2017/readings/L06\%20Backpropagation.pdf}.} we realize that if a variable branches out, then the gradients flowing back to it will get added. Hence, 
+$$
+\partial f / \partial x = \frac{1}{v_1} + \frac{-x_0}{v_1^2} = 1 + 1 = 2.
+$$
+We can verify this to be true from the quotient rule ($f = g/h$):
+$$
+\frac{\partial f}{\partial x} = \frac{g'h - h'g}{g^2} = \frac{(x + y) - x}{(x + y)^2} = 2.
+$$
+
+\subsection{Recurring patterns}
+\label{sec:3.4}
+
+Several backward-flowing operations are quite intuitive and can be easily interpreted. In this subsection we will explore how the basic gates (add, multiply, and max; see $\S$\ref{sec:2.1}) behave in the backward pass. Consider the computational graph for 
+$$
+f(x, y, z, w) = 3(xy + \max(z, w)),
+$$
+shown in Figure~\ref{fig:8} (evaluated at $(x, y, z, w) = (3, -4, 2, -1)$.
+
+\begin{figure}[!t]
+\centering
+\begin{tikzpicture}[align=center,node distance=1.5cm and 1.5cm]
+    \node[] (x) {$x=3$};
+    \node[below=of x] (y) {$y=-4$};
+    \node[below=of y] (z) {$z=2$};
+    \node[below=of z] (w) {$w=-1$};
+    \node[opnode,right=of x,yshift=-0.8cm] (op1) {$\times$};
+    \node[opnode,right=of z,yshift=-0.8cm] (op2) {$\max$};
+    \node[opnode,right=of y,xshift=2cm,yshift=-0.8cm] (op3) {$+$};
+    \node[opnode,right=of op3] (op4) {$\times3$};
+    \node[right=of op4] (f) {$f(x, y, z, w) = -30$};
+
+    \draw (x) edge[edge] (op1);
+    \draw (y) edge[edge] (op1);
+    \draw (z) edge[edge] (op2);
+    \draw (w) edge[edge] (op2);
+    \draw (op1) edge[edge] node[xshift=1.2cm] {$v_1 = -12$} (op3);
+    \draw (op2) edge[edge] node[xshift=0.3cm,yshift=-0.6cm] {$v_2 = 2$} (op3);
+    \draw (op3) edge[edge] node[yshift=-0.6cm] {$v_3 = -10$} (op4);
+    \draw (op4) edge[edge] (f);
+    
+    \draw ([shift={(-0,-0.1)}]f.west) edge[gradedge] node[gradnode,xshift=1.5cm,yshift=-0.6cm] {\footnotesize $\partial f/\partial f = 1$} ([shift={(-0,-0.1)}]op4.east);
+    \draw ([shift={(-0,-0.1)}]op4.west) edge[gradedge] node[gradnode,xshift=0.6cm,yshift=-1.1cm] {\footnotesize $\partial f/\partial v_3 = 3$} ([shift={(-0,-0.1)}]op3.east);
+    \draw ([shift={(-0,0.3)}]op3.west) edge[gradedge] node[gradnode,xshift=0.7cm,yshift=0.7cm] {\footnotesize $\partial f/\partial v_1 = 3$} ([shift={(-0.2,-0.4)}]op1.east);
+    \draw ([shift={(0.1,-0.2)}]op3.west) edge[gradedge] node[gradnode,xshift=0cm,yshift=-0.1cm] {\footnotesize $\partial f/\partial v_2 = 3$} ([shift={(-0.2,0.4)}]op2.east);
+    \draw ([shift={(-0,0.05)}]op1.west) edge[gradedge] node[gradnode,xshift=-1cm,yshift=1.1cm] {\footnotesize $\partial f/\partial x = -12$} ([shift={(-0,-0.3)}]x.east);
+    \draw ([shift={(0,-0.1)}]op1.west) edge[gradedge] node[gradnode,xshift=-1.5cm,yshift=-1.4cm] {\footnotesize $\partial f/\partial y = 9$} ([shift={(-0.3,0.4)}]y.east);
+    \draw ([shift={(-0,0.05)}]op2.west) edge[gradedge] node[gradnode,xshift=-2cm,yshift=-0.1cm] {\footnotesize $\partial f/\partial x = 3$} ([shift={(-0,-0.3)}]z.east);
+    \draw ([shift={(0,-0.1)}]op2.west) edge[gradedge] node[gradnode,xshift=-1.5cm,yshift=-1.4cm] {\footnotesize $\partial f/\partial y = 0$} ([shift={(-0.3,0.4)}]w.east);
+\end{tikzpicture}
+\caption{The computational graph for $f(x, y, z, w) = 3(xy + \max(z, w))$. Notice how the gradient flows at the add, multiply, and max gates.}
+\label{fig:8}
+\end{figure}
+
+We can see that the add gate serves as a gradient \textit{distributor}, i.e., the add gate takes the gradient and passes it to its inputs equally. This is in line with the reasoning that the local gradient for an add gate is simply $1$ on all its inputs. In Figure~\ref{fig:8}, the add gate routes the gradient $\partial f / \partial v_3 = 3$ to its inputs $v_1$ and $v_2$ equally and unchanged.
+
+Next, let's look at the max gate---the max gate serves as a gradient \textit{router}. Unlike the add gate, the max gate routes the gradient (completely and unchanged) to the max of the inputs. This resonates with our understanding that the local gradient at max gate is $1$ for the higher value of the inputs and $0$ for the lower-valued input. In Figure~\ref{fig:8}, the max gate routes the gradient $\partial f / \partial v_2 = 3$ entirely to $z$ (since $z > w$).
+
+Finally, consider the multiply gate as a gradient \textit{cross-amplifier}. The local gradients at the multiply gate are the switched input values, which then get multiplied (chain rule) with the backward-flowing gradient. Such cross-amplification of multiply gate has some unintended effects---if one of the inputs is really small and the other really large, the multiply gate routes the gradients in a way that the bigger input has a small gradient, while the smaller input has a large gradient. Why is this a problem?---consider the case of an affine transformation\footnote{A linear transformation fixes the origin, while an affine transformation need not do so. An affine transformation is often the composition of a linear transformation with a translation.} involving $w^Tx$; what happens if we scale $x$ by a factor of $100$? The resultant gradients on $w$ would be a $100\times$ larger, and we would have to lower the learning rate by that factor to compensate. This is say that data preprocessing can have unwanted consequences and care must be taken when using first-order, iterative optimization methods.

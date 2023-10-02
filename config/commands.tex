@@ -1,0 +1,59 @@
+%% authors: Tushaar Gangavarapu
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%-TG: set TOC vskip
+\setlength{\cftbeforesecskip}{6pt}
+
+%-TG: tikz-like arrows
+\newcommand\trianglerightarrow{\relbar\joinrel\mathrel\RHD}
+\newcommand\trianglexleftarrow{\mathrel\LHD\joinrel\relbar}
+
+%-TG: Jacobian
+\newcommand{\J}{\mathbf{J}}
+
+%-TG: tt font style: pcr, cmvtt, cmtt
+\renewcommand\ttdefault{cmvtt}
+
+%-TG: tt font < and > symbols
+\newcommand{\lt}{\scalebox{.7}[1.0]{<}}
+\newcommand{\gt}{\scalebox{.7}[1.0]{>}}
+
+%-TG: header (lecture number, title, author, date)
+\setlength\parindent{0in}
+\addtolength\parskip{1ex}
+\setlength\fboxrule{.4mm}\setlength{\fboxsep}{1.75mm}
+\newlength\header
+\header=\textwidth
+\addtolength\header{-4.35mm}
+\parindent=0pt
+\parskip=1ex
+
+\newcommand{\lecture}[4]{
+    \begin{center}
+    \framebox{\parbox\header{\normalsize 
+        CS~4740 Fa'23 lecture~#1 \hfill
+        #2 \\[0.15em]
+        #4 \hfill
+        #3}}
+    \end{center}
+    \medskip
+}
+
+%-TG: net ID box
+\newcommand\netidbox{\fbox{\phantom{~TG352~}}}
+
+%-TG: color fix for multiline comments
+\makeatletter
+\long\def\@textcolor#1#2#3{\protect\leavevmode{\color#1{#2}#3}}
+\makeatother
+
+%-TG: including hints after questions
+\newcommand{\hint}[1]{{\it{Hint: #1}}}
+
+%-TG: question
+\newcommand{\question}[2]{\par\vspace{0.5cm}\textbf{#1.} #2}
+
+%-TG: answer
+\newcommand{\answer}[1]{\par\vspace{0.2cm}\textcolor{blue}{\textit{Answer}. #1}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

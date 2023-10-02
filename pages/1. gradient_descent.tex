@@ -1,0 +1,32 @@
+\section{Gradient descent}
+\label{sec:1}
+
+So far, we've seen how to learn some non-linear transformation of the input $f(x; \theta)$\footnote{$f(x; \theta)$ indicates a function $f$ of input $x$, parameterized by $\theta$ (these are $W, b$ for a neural net).} (e.g., feed-forward, recurrent net) to ``fit'' the input data. Mathematically, fitting the the model to the input data means minimizing some \textit{appropriate} loss function $J(\theta)$ such as squared loss, negative log-likelihood, cross-entropy loss, distributional divergence, etc.
+
+So we wish to minimize some ``nice'' ($\mathscr{C}^1$-continuous\footnote{$f$ being $\mathscr{C}^k$-continuous implies that $f$ is differentiable $k$ times and the $k$-th derivative is continuous.} and convex) $J(\theta): \mathbb{R}^n \rightarrow \mathbb{R}$; however, note that the landscape of $f(x; \theta)$ in case of neural nets is quite complex. While it is possible to derive an analytical solution, in various cases, finding an exact solution can be intractable and computationally more expensive than running a fixed point iteration such as gradient descent. Even in the simple case of a linear regression, the closed form solution requires the QR factorization of the design matrix $X \in \mathbb{R}^{m \times n}$, which has the asymptotic complexity of $\mathcal{O}(mn^2)$.\footnote{QR factorization using Householder reflections are the default choice in least squares problems, as opposed to computing $\theta^\star = (X^TX)^{-1}X^T y$ which requires computing an explicit inverse.} Even beyond the computational efficiency, gradient descent has been known to have some implicit regularization effects---see Landweber iteration,\footnote{See \url{https://www.cs.cornell.edu/courses/cs6241/2023fa/lec/2023-08-31.pdf}.} double descent phenomena \cite{belkin2019reconciling} for more specifics.
+
+To this end, let's construct a sequence of iterates $\theta^{(1)}, \theta^{(2)}, \dotsc, \theta^{(k)}$, starting with some good initial guess $\theta^{(0)} \in \mathbb{R}^n$, such that
+
+\begin{align}
+\label{eq:1}
+\theta^{(k+1)} = G\left(\theta^{(k)}\right) = \theta^{(k)} - \alpha_k \nabla J(\theta^{(k)}),
+\end{align}
+
+where $\alpha_k$ is the step size (learning rate), chosen adaptively or through some fixed schedule, and $\nabla J\left(\theta^{(k)}\right)$, read ``nabla $J$'' or ``del $J$,'' is the gradient vector (dual: total derivative $dJ\left(\theta^{(k)}\right)$) at a point $\theta^{(k)}$: 
+\begin{align}
+\renewcommand{\arraystretch}{2.3}
+\label{eq:2}
+\nabla J\left(\theta^{(k)}\right) = \begin{bmatrix}
+\left.\dfrac{\partial J}{\partial \theta_1}\right\vert_{\theta=\theta^{(k)}} \\
+\left.\dfrac{\partial J}{\partial \theta_2}\right\vert_{\theta=\theta^{(k)}} \\
+\vdots \\
+\left.\dfrac{\partial J}{\partial \theta_n}\right\vert_{\theta=\theta^{(k)}}
+\end{bmatrix}.
+\renewcommand{\arraystretch}{1.5}
+\end{align}
+
+The gradient vector dotted with a specific direction gives the directional derivative along that direction. Note that for some local minima $\theta^\star$ of $J(\theta)$, we have $\nabla J(\theta^\star) = 0$.\footnote{Consequentially, from (\ref{eq:1}), we have $G(\theta^\star) = \theta^\star$---such iterations are known as fixed point iterations and $\theta^\star$ is a fixed point.} Hence our objective is to move in the direction of the steepest descent. If $\theta^\star$ is a strong local minimizer of $J(\theta)$, then gradient descent converges for sufficiently small $\alpha$; the rate of convergence depends on how well-conditioned the Hessian $H_J(\theta^\star)$ is.
+
+As an aside: (\ref{eq:1}) is the computation that runs when you call \texttt{optimizer.step()} in PyTorch, with \texttt{optimizer} being \texttt{torch.optim.SGD}.
+
+We now have an approach of finding a (local) minimizer of $J(\theta)$; but how exactly do we compute the gradient $\nabla J\left(\theta^{(k)}\right)$? To this end, we will discuss \textit{backpropagation}, a way of efficiently computing gradients using the recursive application of the chain rule. Note that for now, we are only concerned about the gradient with respect to the model parameters; however, using backpropagation, we can compute the gradient of $f(x; \theta)$ with respect to the \textit{inputs} to interpret how sensitive the neural network is to specific inputs.
