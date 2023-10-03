@@ -104,13 +104,13 @@ $$
     w_{21} & w_{22} & \cdots & w_{2n} \\
     \vdots & \vdots & \ddots & \vdots \\
     w_{m1} & w_{m2} & \cdots & w_{mn} \\
-\end{bmatrix}^T e = W^T e
+\end{bmatrix}^T e = W^T e,
 $$
 where $e \in \mathbb{R}^n$ is a vector of all ones. For $\nabla_W$, let us flatten $W$ using the row major as
 $$
 \widetilde{w} = \begin{bmatrix}
     w_{11} & \cdots & w_{1n} & w_{21} & \cdots & w_{2n} & \cdots & w_{m1} & \cdots & w_{mn}
-    \end{bmatrix}^T
+    \end{bmatrix}^T.
 $$
 Now let's use $\widetilde{w}$ instead of $W$ (we'll reshape later) and compute $\nabla_{\widetilde{w}} f$ just as we did with $x$:
 \begin{align*}
