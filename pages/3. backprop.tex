@@ -65,7 +65,7 @@ def f(x, y, z):
 # Compute the gradients by calling ".backward()".
 f(x0, y0, z0).backward()
 
-# Use ".grad()" to make access the gradients.
+# Use ".grad()" to access the gradients.
 assert x0.grad == -4.0 and y0.grad == -4.0 and z0.grad == 3.0
 \end{lstlisting}
 
