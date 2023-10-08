@@ -291,7 +291,7 @@ $$
 
 As can be seen from the computational graph of $f(x, y)$ shown in Figure~\ref{fig:7}, node $x$ branches, resulting in two incoming gradients at $x$, one from the divide gate and one from the add gate. Following the multivariable chain rule,\footnote{See \url{https://www.cs.toronto.edu/~rgrosse/courses/csc321_2017/readings/L06\%20Backpropagation.pdf}.} we realize that if a variable branches out, then the gradients flowing back to it will get added. Hence, 
 $$
-\partial f / \partial x = \frac{1}{v_1} + \frac{-x_0}{v_1^2} = 1 + 1 = 2.
+\frac{\partial f}{\partial x} = \frac{1}{v_1} + \frac{-x_0}{v_1^2} = 1 + 1 = 2.
 $$
 We can verify this to be true from the quotient rule ($f = g/h$):
 $$
